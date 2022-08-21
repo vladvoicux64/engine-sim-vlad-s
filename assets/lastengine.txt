@@ -1,2 +1,2 @@
-    engine: M52B28()
-2
+    engine: chev_truck_454()
+3

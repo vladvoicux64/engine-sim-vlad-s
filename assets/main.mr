@@ -5,6 +5,6 @@ import "engines/bmw/M52B28.mr"
 import "engines/chevrolet/chev_truck_454.mr"
 
 set_engine(
-    engine: M52B28()
+    engine: chev_truck_454()
 )
 
