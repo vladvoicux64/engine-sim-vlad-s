@@ -1,6 +1,10 @@
 import "engine_sim.mr"
 import "engines/kohler/kohler_ch750.mr"
+import "engines/audi/i5.mr"
+import "engines/bmw/M52B28.mr"
+import "engines/chevrolet/chev_truck_454.mr"
 
 set_engine(
     engine: kohler_ch750()
 )
+

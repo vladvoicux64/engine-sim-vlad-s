@@ -16,14 +16,20 @@
 
 #include "../scripting/include/compiler.h"
 
+#include "../assets/enginelist.h"
+
 #include <chrono>
 #include <stdlib.h>
 #include <sstream>
-
+#include <string>
+#include <vector>
+#include <fstream>
+#include <iostream>
 
 #if ATG_ENGINE_DISCORD_ENABLED
 #include "../discord/Discord.h"
 #endif
+#include <boost/filesystem/fstream.hpp>
 
 std::string EngineSimApplication::s_buildVersion = "0.1.8a";
 
@@ -394,6 +400,49 @@ float EngineSimApplication::unitsToPixels(float units) const {
     return units * f;
 }
 
+
+
+int currentEngine;
+std::string strReplace;
+std::string strReplacement;
+std::string strcommand = "engine: ";
+std::string strTemp;
+
+void fetchlastenginedata() {
+    std::ifstream lastengine("../assets/lastengine.txt");
+    getline(lastengine, strReplace);
+    lastengine >> currentEngine;
+    lastengine.close();
+}
+
+void savelastenginedata() {
+    std::ofstream lastengine("../assets/lastengine.txt");
+    lastengine << strReplace << std::endl;
+    lastengine << currentEngine;
+    lastengine.close();
+}
+
+
+void updateengine() {
+    strReplacement = "    " + strcommand + enginesvector[currentEngine] + "()";
+    std::ifstream filein("../assets/main.mr");
+    std::string strNew;
+    while (std::getline(filein, strTemp))
+    {
+        if (strTemp.find(strReplace) != std::string::npos) {
+            strTemp = strReplacement;
+            strReplace = strTemp;
+        }
+        strTemp += "\n";
+        strNew += strTemp;
+    }
+    filein.close();
+    std::ofstream fileout("../assets/main.mr");
+    fileout.seekp(std::ios::beg);
+    fileout << strNew;
+    fileout.close();
+}
+
 void EngineSimApplication::run() {
     double throttle = 1.0;
     double targetThrottle = 1.0;
@@ -432,6 +481,21 @@ void EngineSimApplication::run() {
                 m_infoCluster->setLogMessage("Exited fullscreen mode");
             }
         }
+
+        fetchlastenginedata();
+        if (m_engine.ProcessKeyDown(ysKey::Code::O)) {
+            currentEngine = (currentEngine > 0) ? currentEngine - 1 : (enginesvector.size() - 1);
+            m_infoCluster->setLogMessage("[O] - Cycle prev. engine. ");
+            updateengine();
+            
+        }
+        if (m_engine.ProcessKeyDown(ysKey::Code::P)) {
+            currentEngine = (currentEngine < (enginesvector.size()-1)) ? currentEngine +1 : 0;
+            m_infoCluster->setLogMessage("[P] - Cycle next engine.");
+            updateengine();
+        }
+        savelastenginedata();
+
 
         double newClutchPressure = 1.0;
         bool fineControlInUse = false;
