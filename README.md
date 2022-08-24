@@ -4,6 +4,47 @@
 ## **Warning: project is in development and will change frequently**
 ---
 
+## Note:
+
+This is my version of Ange's project. What I added is the ability to quickly change engines and a launcher to conveniently restart the app. My design is still crude but I await reviews/ideas in the Issues section.
+
+## How to use new features:
+
+Navigate to assets/enginelist.h and open it with notepad. Add the public node names of the engines you added to the vector, following existing syntax. It should look like this:
+
+```std::vector<std::string>enginesvector = { "kohler_ch750", "audi_i5_2_2L", "M52B28", "chev_truck_454", "your engine 1", "your engine 2" };```
+
+Also do not forget to go to assets/main.mr and open it with notepad and include at the top the .mr files of the engines you add to the assets folder. It should look like this:
+
+```
+import "engine_sim.mr"
+import "engines/kohler/kohler_ch750.mr"
+import "engines/audi/i5.mr"
+import "engines/bmw/M52B28.mr"
+import "engines/chevrolet/chev_truck_454.mr"
+import "engines/<yourenginefile>.mr"
+
+set_engine(
+    engine: chev_truck_454()
+)
+
+set_application_settings(
+    start_fullscreen: false
+)
+```
+
+To use the launcher right click launcher.bat and run as administrator. When you want to restart/close app just highligth the launcher and input your desired action. 
+
+New controls:
+
+| Key/Input | Action |
+| :---: | :---: |
+| O | Cycle prev. engine (in app) |
+| P | Cycle next engine (in app) |
+| R | Restart (in launcher) |
+| C | Close (in launcher) |
+
+
 ## What is this?
 
 This is a real-time internal combustion engine simulation **designed specifically to produce engine audio and simulate engine response characteristics.** It is NOT a scientific tool and cannot be expected to provide accurate figures for the purposes of engineering or engine tuning.
