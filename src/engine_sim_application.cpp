@@ -16,8 +16,6 @@
 
 #include "../scripting/include/compiler.h"
 
-#include "../assets/enginelist.h"
-
 #include <chrono>
 #include <stdlib.h>
 #include <sstream>
@@ -408,12 +406,23 @@ std::string strReplace;
 std::string strReplacement;
 std::string strcommand = "engine: ";
 std::string strTemp;
+std::vector<std::string> enginesvector;
+
+
 
 void fetchlastenginedata() {
     std::ifstream lastengine("../assets/lastengine.txt");
     getline(lastengine, strReplace);
     lastengine >> currentEngine;
     lastengine.close();
+    std::ifstream enginefile("../assets/enginelist.txt");
+    while (!enginefile.eof())
+    {
+        std::string s;
+        getline(enginefile, s);
+        enginesvector.push_back(s);
+    }
+    enginefile.close();
 }
 
 void savelastenginedata() {
