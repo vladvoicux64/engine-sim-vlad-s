@@ -77,6 +77,7 @@ class Simulator {
         double getSimulationSpeed() const { return m_simulationSpeed; }
 
         double getFilteredDynoTorque() const { return m_dynoTorque; }
+        double getDynoPower() const { return m_dynoTorque * m_engine->getSpeed(); }
         double getAverageOutputSignal() const;
 
         Synthesizer *getSynthesizer() { return &m_synthesizer; }
@@ -87,6 +88,7 @@ class Simulator {
 
     protected:
         void placeAndInitialize();
+        void placeCylinder(int i);
         void initializeSynthesizer();
         
     protected:
