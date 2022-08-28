@@ -25,7 +25,7 @@
 #include "../discord/Discord.h"
 #endif
 
-std::string EngineSimApplication::s_buildVersion = "0.1.8a";
+std::string EngineSimApplication::s_buildVersion = "0.1.9a";
 
 
 EngineSimApplication::EngineSimApplication() {
@@ -215,7 +215,7 @@ void EngineSimApplication::initialize() {
     simulatorParams.SystemType = Simulator::SystemType::NsvOptimized;
     simulatorParams.Transmission = m_transmission;
     simulatorParams.Vehicle = m_vehicle;
-    simulatorParams.SimulationFrequency = 10000;
+    simulatorParams.SimulationFrequency = m_iceEngine->getSimulationFrequency();
     simulatorParams.FluidSimulationSteps = 8;
     m_simulator.initialize(simulatorParams);
     m_simulator.startAudioRenderingThread();
@@ -281,15 +281,21 @@ void EngineSimApplication::initialize() {
     m_audioSource->SetPan(0.0f);
     m_audioSource->SetVolume(1.0f);
 
+    Synthesizer::AudioParameters audioParams = m_simulator.getSynthesizer()->getAudioParameters();
+    audioParams.InputSampleNoise = static_cast<float>(m_iceEngine->getInitialJitter());
+    audioParams.AirNoise = static_cast<float>(m_iceEngine->getInitialNoise());
+    audioParams.dF_F_mix = static_cast<float>(m_iceEngine->getInitialHighFrequencyGain());
+    m_simulator.getSynthesizer()->setAudioParameters(audioParams);
+
 #ifdef ATG_ENGINE_DISCORD_ENABLED
-    //Create a global instance of discord-rpc
+    // Create a global instance of discord-rpc
     CDiscord::CreateInstance();
-    //Enable it, this needs to be set via a config file of some sort. 
+
+    // Enable it, this needs to be set via a config file of some sort. 
     GetDiscordManager()->SetUseDiscord(true);
     DiscordRichPresence passMe = { 0 };
     GetDiscordManager()->SetStatus(passMe, m_iceEngine->getName(), s_buildVersion);
-#endif
-
+#endif /* ATG_ENGINE_DISCORD_ENABLED */
 }
 
 void EngineSimApplication::process(float frame_dt) {
@@ -422,8 +428,8 @@ float EngineSimApplication::unitsToPixels(float units) const {
 }
 
 void EngineSimApplication::run() {
-    double throttle = 1.0;
-    double targetThrottle = 1.0;
+    double speedSetting = 1.0;
+    double targetSpeedSetting = 1.0;
 
     double clutchPressure = 1.0;
     double targetClutchPressure = 1.0;
@@ -555,31 +561,31 @@ void EngineSimApplication::run() {
             fineControlInUse = true;
         }
 
-        const double prevTargetThrottle = targetThrottle;
-        targetThrottle = fineControlMode ? targetThrottle : 1.0;
+        const double prevTargetThrottle = targetSpeedSetting;
+        targetSpeedSetting = fineControlMode ? targetSpeedSetting : 0.0;
         if (m_engine.IsKeyDown(ysKey::Code::Q)) {
-            targetThrottle = 0.99;
+            targetSpeedSetting = 0.01;
         }
         else if (m_engine.IsKeyDown(ysKey::Code::W)) {
-            targetThrottle = 0.9;
+            targetSpeedSetting = 0.1;
         }
         else if (m_engine.IsKeyDown(ysKey::Code::E)) {
-            targetThrottle = 0.8;
+            targetSpeedSetting = 0.2;
         }
         else if (m_engine.IsKeyDown(ysKey::Code::R)) {
-            targetThrottle = 0.0;
+            targetSpeedSetting = 1.0;
         }
         else if (fineControlMode && !fineControlInUse) {
-            targetThrottle = std::fmax(0.0, std::fmin(1.0, targetThrottle - mouseWheelDelta * 0.0001));
+            targetSpeedSetting = clamp(targetSpeedSetting + mouseWheelDelta * 0.0001);
         }
 
-        if (prevTargetThrottle != targetThrottle) {
-            m_infoCluster->setLogMessage("Throttle set to " + std::to_string(targetThrottle));
+        if (prevTargetThrottle != targetSpeedSetting) {
+            m_infoCluster->setLogMessage("Speed control set to " + std::to_string(targetSpeedSetting));
         }
 
-        throttle = targetThrottle * 0.5 + 0.5 * throttle;
+        speedSetting = targetSpeedSetting * 0.5 + 0.5 * speedSetting;
 
-        m_iceEngine->setThrottle(throttle);
+        m_iceEngine->setSpeedControl(speedSetting);
 
         if (m_engine.ProcessKeyDown(ysKey::Code::M)) {
             const int currentLayer = getViewParameters().Layer0;
@@ -791,24 +797,23 @@ void EngineSimApplication::drawGenerated(
 }
 
 void EngineSimApplication::configure(const ApplicationSettings &settings) {
-    //Assign to the application so we can grab it in other classes.
-    m_appSettings = settings;
+    m_applicationSettings = settings;
 
     if (settings.startFullscreen) {
         m_engine.GetGameWindow()->SetWindowStyle(ysWindow::WindowStyle::Fullscreen);
     }
 
-    m_background = ysColor::srgbiToLinear(m_appSettings.colorBackground);
-    m_foreground = ysColor::srgbiToLinear(m_appSettings.colorForeground);
-    m_shadow = ysColor::srgbiToLinear(m_appSettings.colorShadow);
-    m_highlight1 = ysColor::srgbiToLinear(m_appSettings.colorHighlight1);
-    m_highlight2 = ysColor::srgbiToLinear(m_appSettings.colorHighlight2);
-    m_pink = ysColor::srgbiToLinear(m_appSettings.colorPink);
-    m_red = ysColor::srgbiToLinear(m_appSettings.colorRed);
-    m_orange = ysColor::srgbiToLinear(m_appSettings.colorOrange);
-    m_yellow = ysColor::srgbiToLinear(m_appSettings.colorYellow);
-    m_blue = ysColor::srgbiToLinear(m_appSettings.colorBlue);
-    m_green = ysColor::srgbiToLinear(m_appSettings.colorGreen);
+    m_background = ysColor::srgbiToLinear(m_applicationSettings.colorBackground);
+    m_foreground = ysColor::srgbiToLinear(m_applicationSettings.colorForeground);
+    m_shadow = ysColor::srgbiToLinear(m_applicationSettings.colorShadow);
+    m_highlight1 = ysColor::srgbiToLinear(m_applicationSettings.colorHighlight1);
+    m_highlight2 = ysColor::srgbiToLinear(m_applicationSettings.colorHighlight2);
+    m_pink = ysColor::srgbiToLinear(m_applicationSettings.colorPink);
+    m_red = ysColor::srgbiToLinear(m_applicationSettings.colorRed);
+    m_orange = ysColor::srgbiToLinear(m_applicationSettings.colorOrange);
+    m_yellow = ysColor::srgbiToLinear(m_applicationSettings.colorYellow);
+    m_blue = ysColor::srgbiToLinear(m_applicationSettings.colorBlue);
+    m_green = ysColor::srgbiToLinear(m_applicationSettings.colorGreen);
 }
 
 void EngineSimApplication::createObjects(Engine *engine) {
@@ -858,6 +863,7 @@ const SimulationObject::ViewParameters &EngineSimApplication
 }
 
 void EngineSimApplication::renderScene() {
+    m_textRenderer.SetColor(ysColor::linearToSrgb(m_foreground));
     m_shaders.SetClearColor(ysColor::linearToSrgb(m_shadow));
 
     const int screenWidth = m_engine.GetGameWindow()->GetGameWidth();

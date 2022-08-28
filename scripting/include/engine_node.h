@@ -8,6 +8,7 @@
 #include "ignition_module_node.h"
 #include "engine_context.h"
 #include "fuel_node.h"
+#include "throttle_nodes.h"
 
 #include "engine_sim.h"
 
@@ -46,6 +47,7 @@ namespace es_script {
             parameters.CylinderCount = cylinderCount;
             parameters.ExhaustSystemCount = (int)exhaustSystems.size();
             parameters.IntakeCount = (int)intakes.size();
+            parameters.throttle = m_throttle->generate();
             engine->initialize(parameters);
 
             {
@@ -154,6 +156,11 @@ namespace es_script {
             addInput("starter_speed", &m_parameters.StarterSpeed);
             addInput("redline", &m_parameters.Redline);
             addInput("fuel", &m_fuel, InputTarget::Type::Object);
+            addInput("throttle", &m_throttle, InputTarget::Type::Object);
+            addInput("simulation_frequency", &m_parameters.initialSimulationFrequency);
+            addInput("hf_gain", &m_parameters.initialHighFrequencyGain);
+            addInput("jitter", &m_parameters.initialJitter);
+            addInput("noise", &m_parameters.initialNoise);
 
             ObjectReferenceNode<EngineNode>::registerInputs();
         }
@@ -165,6 +172,7 @@ namespace es_script {
             readAllInputs();
         }
 
+        ThrottleNode *m_throttle = nullptr;
         IgnitionModuleNode *m_ignitionModule = nullptr;
         FuelNode *m_fuel = nullptr;
 
