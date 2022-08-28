@@ -21,6 +21,7 @@
 #include "mixer_cluster.h"
 #include "info_cluster.h"
 #include "application_settings.h"
+#include "transmission.h"
 
 #include "delta.h"
 #include "dtv.h"
@@ -64,8 +65,8 @@ class EngineSimApplication {
         float unitsToPixels(float units) const;
 
         ysVector getBackgroundColor() const { return m_background; }
+        ysVector getForegroundColor() const { return m_foreground; }
         ysVector getHightlight1Color() const { return m_highlight1; }
-        ysVector getWhite() const { return ysMath::Constants::One; }
         ysVector getPink() const { return m_pink; }
         ysVector getGreen() const { return m_green; }
         ysVector getYellow() const { return m_yellow; }
@@ -83,7 +84,7 @@ class EngineSimApplication {
 
         Simulator *getSimulator() { return &m_simulator; }
         InfoCluster *getInfoCluster() { return m_infoCluster; }
-        ApplicationSettings* getAppSettings() { return &m_appSettings; }
+        ApplicationSettings* getAppSettings() { return &m_applicationSettings; }
 
     protected:
         void renderScene();
@@ -98,7 +99,7 @@ class EngineSimApplication {
         int m_screenWidth;
         int m_screenHeight;
         
-        ApplicationSettings m_appSettings;
+        ApplicationSettings m_applicationSettings;
         dbasic::ShaderSet m_shaderSet;
         Shaders m_shaders;
 
@@ -116,6 +117,8 @@ class EngineSimApplication {
 
         std::vector<SimulationObject *> m_objects;
         Engine *m_iceEngine;
+        Vehicle *m_vehicle;
+        Transmission *m_transmission;
         Simulator m_simulator;
         double m_dynoSpeed;
         double m_torque;

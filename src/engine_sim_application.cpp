@@ -29,7 +29,7 @@
 #endif
 #include <boost/filesystem/fstream.hpp>
 
-std::string EngineSimApplication::s_buildVersion = "0.1.8a";
+std::string EngineSimApplication::s_buildVersion = "0.1.9a";
 
 
 EngineSimApplication::EngineSimApplication() {
@@ -74,6 +74,9 @@ EngineSimApplication::EngineSimApplication() {
     m_infoCluster = nullptr;
     m_iceEngine = nullptr;
     m_mainRenderTarget = nullptr;
+
+    m_vehicle = nullptr;
+    m_transmission = nullptr;
 
     m_oscillatorSampleOffset = 0;
     m_gameWindowHeight = 256;
@@ -175,39 +178,48 @@ void EngineSimApplication::initialize() {
         configure(output.applicationSettings);
 
         m_iceEngine = output.engine;
+        m_vehicle = output.vehicle;
+        m_transmission = output.transmission;
     }
     else {
         m_iceEngine = nullptr;
+        m_vehicle = nullptr;
+        m_transmission = nullptr;
     }
 
     compiler.destroy();
 
 #endif /* PIRANHA_ENABLED */
 
-    Vehicle::Parameters vehParams;
-    vehParams.Mass = units::mass(1597, units::kg);
-    vehParams.DiffRatio = 3.42;
-    vehParams.TireRadius = units::distance(10, units::inch);
-    vehParams.DragCoefficient = 0.25;
-    vehParams.CrossSectionArea = units::distance(6.0, units::foot) * units::distance(6.0, units::foot);
-    vehParams.RollingResistance = 2000.0;
-    Vehicle *vehicle = new Vehicle;
-    vehicle->initialize(vehParams);
+    if (m_vehicle == nullptr)
+    {
+        Vehicle::Parameters vehParams;
+        vehParams.mass = units::mass(1597, units::kg);
+        vehParams.diffRatio = 3.42;
+        vehParams.tireRadius = units::distance(10, units::inch);
+        vehParams.dragCoefficient = 0.25;
+        vehParams.crossSectionArea = units::distance(6.0, units::foot) * units::distance(6.0, units::foot);
+        vehParams.rollingResistance = 2000.0;
+        m_vehicle = new Vehicle;
+        m_vehicle->initialize(vehParams);
+    }
 
-    const double gearRatios[] = { 2.97, 2.07, 1.43, 1.00, 0.84, 0.56 };
-    Transmission::Parameters tParams;
-    tParams.GearCount = 6;
-    tParams.GearRatios = gearRatios;
-    tParams.MaxClutchTorque = units::torque(1000.0, units::ft_lb);
-    Transmission *transmission = new Transmission;
-    transmission->initialize(tParams);
+    if (m_transmission == nullptr) {
+        const double gearRatios[] = { 2.97, 2.07, 1.43, 1.00, 0.84, 0.56 };
+        Transmission::Parameters tParams;
+        tParams.GearCount = 6;
+        tParams.GearRatios = gearRatios;
+        tParams.MaxClutchTorque = units::torque(1000.0, units::ft_lb);
+        m_transmission = new Transmission;
+        m_transmission->initialize(tParams);
+    }
 
     Simulator::Parameters simulatorParams;
     simulatorParams.Engine = m_iceEngine;
     simulatorParams.SystemType = Simulator::SystemType::NsvOptimized;
-    simulatorParams.Transmission = transmission;
-    simulatorParams.Vehicle = vehicle;
-    simulatorParams.SimulationFrequency = 10000;
+    simulatorParams.Transmission = m_transmission;
+    simulatorParams.Vehicle = m_vehicle;
+    simulatorParams.SimulationFrequency = m_iceEngine->getSimulationFrequency();
     simulatorParams.FluidSimulationSteps = 8;
     m_simulator.initialize(simulatorParams);
     m_simulator.startAudioRenderingThread();
@@ -273,15 +285,21 @@ void EngineSimApplication::initialize() {
     m_audioSource->SetPan(0.0f);
     m_audioSource->SetVolume(1.0f);
 
+    Synthesizer::AudioParameters audioParams = m_simulator.getSynthesizer()->getAudioParameters();
+    audioParams.InputSampleNoise = static_cast<float>(m_iceEngine->getInitialJitter());
+    audioParams.AirNoise = static_cast<float>(m_iceEngine->getInitialNoise());
+    audioParams.dF_F_mix = static_cast<float>(m_iceEngine->getInitialHighFrequencyGain());
+    m_simulator.getSynthesizer()->setAudioParameters(audioParams);
+
 #ifdef ATG_ENGINE_DISCORD_ENABLED
-    //Create a global instance of discord-rpc
+    // Create a global instance of discord-rpc
     CDiscord::CreateInstance();
-    //Enable it, this needs to be set via a config file of some sort. 
+
+    // Enable it, this needs to be set via a config file of some sort. 
     GetDiscordManager()->SetUseDiscord(true);
     DiscordRichPresence passMe = { 0 };
     GetDiscordManager()->SetStatus(passMe, m_iceEngine->getName(), s_buildVersion);
-#endif
-
+#endif /* ATG_ENGINE_DISCORD_ENABLED */
 }
 
 void EngineSimApplication::process(float frame_dt) {
@@ -383,6 +401,20 @@ void EngineSimApplication::process(float frame_dt) {
 void EngineSimApplication::render() {
     for (SimulationObject *object : m_objects) {
         object->generateGeometry();
+    }
+
+    m_viewParameters.Sublayer = 0;
+    for (SimulationObject *object : m_objects) {
+        object->render(&getViewParameters());
+    }
+
+    m_viewParameters.Sublayer = 1;
+    for (SimulationObject *object : m_objects) {
+        object->render(&getViewParameters());
+    }
+
+    m_viewParameters.Sublayer = 2;
+    for (SimulationObject *object : m_objects) {
         object->render(&getViewParameters());
     }
 
@@ -454,10 +486,11 @@ void updateengine() {
 }
 
 void EngineSimApplication::run() {
-    double throttle = 1.0;
-    double targetThrottle = 1.0;
+    double speedSetting = 1.0;
+    double targetSpeedSetting = 1.0;
 
     double clutchPressure = 1.0;
+    double targetClutchPressure = 1.0;
     int lastMouseWheel = 0;
 
     while (true) {
@@ -507,7 +540,6 @@ void EngineSimApplication::run() {
         savelastenginedata();
 
 
-        double newClutchPressure = 1.0;
         bool fineControlInUse = false;
         if (m_engine.IsKeyDown(ysKey::Code::Z)) {
             const double rate = fineControlMode
@@ -602,31 +634,31 @@ void EngineSimApplication::run() {
             fineControlInUse = true;
         }
 
-        const double prevTargetThrottle = targetThrottle;
-        targetThrottle = fineControlMode ? targetThrottle : 1.0;
+        const double prevTargetThrottle = targetSpeedSetting;
+        targetSpeedSetting = fineControlMode ? targetSpeedSetting : 0.0;
         if (m_engine.IsKeyDown(ysKey::Code::Q)) {
-            targetThrottle = 0.99;
+            targetSpeedSetting = 0.01;
         }
         else if (m_engine.IsKeyDown(ysKey::Code::W)) {
-            targetThrottle = 0.9;
+            targetSpeedSetting = 0.1;
         }
         else if (m_engine.IsKeyDown(ysKey::Code::E)) {
-            targetThrottle = 0.8;
+            targetSpeedSetting = 0.2;
         }
         else if (m_engine.IsKeyDown(ysKey::Code::R)) {
-            targetThrottle = 0.0;
+            targetSpeedSetting = 1.0;
         }
         else if (fineControlMode && !fineControlInUse) {
-            targetThrottle = std::fmax(0.0, std::fmin(1.0, targetThrottle - mouseWheelDelta * 0.0001));
+            targetSpeedSetting = clamp(targetSpeedSetting + mouseWheelDelta * 0.0001);
         }
 
-        if (prevTargetThrottle != targetThrottle) {
-            m_infoCluster->setLogMessage("Throttle set to " + std::to_string(targetThrottle));
+        if (prevTargetThrottle != targetSpeedSetting) {
+            m_infoCluster->setLogMessage("Speed control set to " + std::to_string(targetSpeedSetting));
         }
 
-        throttle = targetThrottle * 0.5 + 0.5 * throttle;
+        speedSetting = targetSpeedSetting * 0.5 + 0.5 * speedSetting;
 
-        m_iceEngine->setThrottle(throttle);
+        m_iceEngine->setSpeedControl(speedSetting);
 
         if (m_engine.ProcessKeyDown(ysKey::Code::M)) {
             const int currentLayer = getViewParameters().Layer0;
@@ -728,11 +760,21 @@ void EngineSimApplication::run() {
             }
         }
 
-        if (m_engine.IsKeyDown(ysKey::Code::Shift)) {
-            newClutchPressure = 0.0;
-
+        if (m_engine.IsKeyDown(ysKey::Code::T)) {
+            targetClutchPressure -= 0.2 * dt;
+        }
+        else if (m_engine.IsKeyDown(ysKey::Code::U)) {
+            targetClutchPressure += 0.2 * dt;
+        }
+        else if (m_engine.IsKeyDown(ysKey::Code::Shift)) {
+            targetClutchPressure = 0.0;
             m_infoCluster->setLogMessage("CLUTCH DEPRESSED");
         }
+        else if (!m_engine.IsKeyDown(ysKey::Code::Y)) {
+            targetClutchPressure = 1.0;
+        }
+
+        targetClutchPressure = clamp(targetClutchPressure);
 
         double clutchRC = 0.001;
         if (m_engine.IsKeyDown(ysKey::Code::Space)) {
@@ -745,7 +787,7 @@ void EngineSimApplication::run() {
         }
 
         const double clutch_s = dt / (dt + clutchRC);
-        clutchPressure = clutchPressure * (1 - clutch_s) + newClutchPressure * clutch_s;
+        clutchPressure = clutchPressure * (1 - clutch_s) + targetClutchPressure * clutch_s;
         m_simulator.getTransmission()->setClutchPressure(clutchPressure);
 
         if (m_engine.ProcessKeyDown(ysKey::Code::M) &&
@@ -828,24 +870,23 @@ void EngineSimApplication::drawGenerated(
 }
 
 void EngineSimApplication::configure(const ApplicationSettings &settings) {
-    //Assign to the application so we can grab it in other classes.
-    m_appSettings = settings;
+    m_applicationSettings = settings;
 
     if (settings.startFullscreen) {
         m_engine.GetGameWindow()->SetWindowStyle(ysWindow::WindowStyle::Fullscreen);
     }
 
-    m_background = ysColor::srgbiToLinear(m_appSettings.colorBackground);
-    m_foreground = ysColor::srgbiToLinear(m_appSettings.colorForeground);
-    m_shadow = ysColor::srgbiToLinear(m_appSettings.colorShadow);
-    m_highlight1 = ysColor::srgbiToLinear(m_appSettings.colorHighlight1);
-    m_highlight2 = ysColor::srgbiToLinear(m_appSettings.colorHighlight2);
-    m_pink = ysColor::srgbiToLinear(m_appSettings.colorPink);
-    m_red = ysColor::srgbiToLinear(m_appSettings.colorRed);
-    m_orange = ysColor::srgbiToLinear(m_appSettings.colorOrange);
-    m_yellow = ysColor::srgbiToLinear(m_appSettings.colorYellow);
-    m_blue = ysColor::srgbiToLinear(m_appSettings.colorBlue);
-    m_green = ysColor::srgbiToLinear(m_appSettings.colorGreen);
+    m_background = ysColor::srgbiToLinear(m_applicationSettings.colorBackground);
+    m_foreground = ysColor::srgbiToLinear(m_applicationSettings.colorForeground);
+    m_shadow = ysColor::srgbiToLinear(m_applicationSettings.colorShadow);
+    m_highlight1 = ysColor::srgbiToLinear(m_applicationSettings.colorHighlight1);
+    m_highlight2 = ysColor::srgbiToLinear(m_applicationSettings.colorHighlight2);
+    m_pink = ysColor::srgbiToLinear(m_applicationSettings.colorPink);
+    m_red = ysColor::srgbiToLinear(m_applicationSettings.colorRed);
+    m_orange = ysColor::srgbiToLinear(m_applicationSettings.colorOrange);
+    m_yellow = ysColor::srgbiToLinear(m_applicationSettings.colorYellow);
+    m_blue = ysColor::srgbiToLinear(m_applicationSettings.colorBlue);
+    m_green = ysColor::srgbiToLinear(m_applicationSettings.colorGreen);
 }
 
 void EngineSimApplication::createObjects(Engine *engine) {
@@ -895,6 +936,7 @@ const SimulationObject::ViewParameters &EngineSimApplication
 }
 
 void EngineSimApplication::renderScene() {
+    m_textRenderer.SetColor(ysColor::linearToSrgb(m_foreground));
     m_shaders.SetClearColor(ysColor::linearToSrgb(m_shadow));
 
     const int screenWidth = m_engine.GetGameWindow()->GetGameWidth();
