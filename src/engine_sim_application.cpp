@@ -436,7 +436,6 @@ float EngineSimApplication::unitsToPixels(float units) const {
 int currentEngine;
 std::string strReplace;
 std::string strReplacement;
-std::string strcommand = "engine: ";
 std::string strTemp;
 std::vector<std::string> enginesvector;
 
@@ -466,7 +465,7 @@ void savelastenginedata() {
 
 
 void updateengine() {
-    strReplacement = "    " + strcommand + enginesvector[currentEngine] + "()";
+    strReplacement = "    " + enginesvector[currentEngine] + "()";
     std::ifstream filein("../assets/main.mr");
     std::string strNew;
     while (std::getline(filein, strTemp))
