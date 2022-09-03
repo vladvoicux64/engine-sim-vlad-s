@@ -10,10 +10,6 @@ This is my version of Ange's project. What I added is the ability to quickly cha
 
 ## How to use new features:
 
-Navigate to ```bin/launcher.bat``` right click on it and edit it. At the ```cd /D``` line remove my path to the game's bin and replace it with your's. It should look like this:
-
-```cd /D yourpath``` 
-
 Navigate to ```assets/enginelist.h``` and open it with notepad. Add the public node names of the engines you added to the vector, following existing syntax. It should look like this:
 
 ```std::vector<std::string>enginesvector = { "kohler_ch750", "audi_i5_2_2L", "M52B28", "chev_truck_454", "your engine 1", "your engine 2" };```
