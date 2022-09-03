@@ -12,12 +12,15 @@ This is my version of Ange's project. What I added is the ability to quickly cha
 
 Navigate to ```assets/enginelist.h``` and open it with notepad. Add the public node names of the engines you added to the vector, following existing syntax. It should look like this:
 
-```"kohler_ch750
+```
+    kohler_ch750
     audi_i5_2_2L 
     M52B28 
     chev_truck_454 
     your engine 1 
-    your engine 2```
+    your engine 2`
+    
+```
 
 Also do not forget to go to ```assets/main.mr``` and open it with notepad and include at the top the .mr files of the engines you add to the assets folder. It should look like this:
 
