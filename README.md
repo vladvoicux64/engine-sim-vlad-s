@@ -18,7 +18,7 @@ Navigate to ```assets/enginelist.h``` and open it with notepad. Add the public n
     M52B28 
     chev_truck_454 
     your engine 1 
-    your engine 2`
+    your engine 2
     
 ```
 
