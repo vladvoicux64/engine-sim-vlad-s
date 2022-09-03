@@ -1,5 +1,5 @@
 @echo off
-cd /D D:\jocuri\engine-sim-vlad-s\bin
+cd bin
 start engine-sim-app.exe
 :loop
 echo Press R to restart and C to close launcher and game...
