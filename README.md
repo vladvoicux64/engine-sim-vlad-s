@@ -41,16 +41,15 @@ set_application_settings(
 )
 ```
 
-To use the launcher right click launcher.bat and run as administrator. When you want to restart/close app just highligth the launcher and input your desired action. 
+Now you can use the controls and cycle through engines, refreshing at the same time.
 
 New controls:
 
 | Key/Input | Action |
 | :---: | :---: |
-| O | Cycle prev. engine (in app) |
-| P | Cycle next engine (in app) |
-| R | Restart (in launcher) |
-| C | Close (in launcher) |
+| O | Cycle prev. engine and restart |
+| P | Cycle next engine and restart |
+
 
 
 ## What is this?
