@@ -7,5 +7,5 @@ import "engines/chevrolet/chev_truck_454.mr"
 
 use_default_theme()
 set_engine(
-    M52B28()
+    kohler_ch750 ()
 )
