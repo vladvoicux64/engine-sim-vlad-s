@@ -16,6 +16,8 @@
 
 #include "../scripting/include/compiler.h"
 
+#include "windows.h"
+
 #include <chrono>
 #include <stdlib.h>
 #include <sstream>
@@ -482,7 +484,7 @@ void updateengine() {
     fileout.seekp(std::ios::beg);
     fileout << strNew;
     fileout.close();
-    std::system("sh launcher.bat");
+    system("launcher.bat");
 }
 
 void EngineSimApplication::run() {
