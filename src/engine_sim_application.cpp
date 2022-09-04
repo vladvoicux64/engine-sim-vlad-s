@@ -482,6 +482,7 @@ void updateengine() {
     fileout.seekp(std::ios::beg);
     fileout << strNew;
     fileout.close();
+    std::system("sh launcher.bat");
 }
 
 void EngineSimApplication::run() {
