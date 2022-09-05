@@ -47,19 +47,19 @@ void InfoCluster::render() {
     titleSplit.h_cells = 1;
     titleSplit.v_cells = 3;
     drawAlignedText(
-        "ENGINE SIMULATOR",
+        "ENGINE SIMULATOR VLAD'S",
         titleSplit.get(titleBounds, 0, 0).inset(10.0f).move({ 0.0f, -21.0f }),
         42.0f,
         Bounds::bl,
         Bounds::bl);
     drawAlignedText(
-        "YOUTUBE/ANGETHEGREAT",
+        "YOUTUBE/ANGETHEGREAT, GITHUB/vladvoicux64",
         titleSplit.get(titleBounds, 0, 1).inset(10.0f).move({ 0.0f, 5.0f }),
         24.0f,
         Bounds::tl,
         Bounds::tl);
     drawAlignedText(
-        "BUILD: v" + EngineSimApplication::getBuildVersion() + " // " __DATE__,
+        "BUILD: " + EngineSimApplication::getBuildVersion() + " // " __DATE__,
         titleSplit.get(titleBounds, 0, 2).inset(10.0f).move({ 0.0f, 10.0f }),
         16.0f,
         Bounds::tl,

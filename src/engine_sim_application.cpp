@@ -31,7 +31,7 @@
 #endif
 #include <boost/filesystem/fstream.hpp>
 
-std::string EngineSimApplication::s_buildVersion = "0.1.9a";
+std::string EngineSimApplication::s_buildVersion = "vlad's v2.1";
 
 
 EngineSimApplication::EngineSimApplication() {
