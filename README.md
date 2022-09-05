@@ -47,8 +47,9 @@ New controls:
 
 | Key/Input | Action |
 | :---: | :---: |
-| O | Cycle prev. engine and restart |
-| P | Cycle next engine and restart |
+| O | Cycle prev. engine |
+| P | Cycle next engine |
+| F5 | Restart |
 
 
 
