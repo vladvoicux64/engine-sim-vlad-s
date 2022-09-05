@@ -533,16 +533,15 @@ void EngineSimApplication::run() {
             m_infoCluster->setLogMessage("[O] - Cycle prev. engine. ");
             updateengine();
             savelastenginedata();
-            system("launcher.bat");
         }
         if (m_engine.ProcessKeyDown(ysKey::Code::P)) {
             currentEngine = (currentEngine < (enginesvector.size()-1)) ? currentEngine +1 : 0;
             m_infoCluster->setLogMessage("[P] - Cycle next engine.");
             updateengine();
             savelastenginedata();
-            system("launcher.bat");
         }
-
+        if (m_engine.ProcessKeyDown(ysKey::Code::F5))
+            system("launcher.bat");
 
         bool fineControlInUse = false;
         if (m_engine.IsKeyDown(ysKey::Code::Z)) {
